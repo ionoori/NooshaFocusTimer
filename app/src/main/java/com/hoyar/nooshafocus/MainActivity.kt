@@ -85,7 +85,7 @@ private fun FocusTimerApp() {
             Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("سلام قهرمان کوچولو! 🌷", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Purple)
+                        Text("سلام نوشاجان قهرمان کوچولو! 🌷", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Purple)
                         Text("قدم‌های کوچیک، ستاره‌های بزرگ", fontSize = 14.sp, color = Purple.copy(alpha = .75f))
                     }
                     Box(Modifier.size(58.dp).clip(CircleShape).background(Color.White.copy(alpha = .85f)), contentAlignment = Alignment.Center) { Text("🦄", fontSize = 32.sp) }
