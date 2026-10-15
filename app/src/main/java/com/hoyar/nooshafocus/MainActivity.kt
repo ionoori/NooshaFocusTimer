@@ -3,9 +3,13 @@ package com.hoyar.nooshafocus
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -17,8 +21,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,8 +64,35 @@ private fun FocusTimerApp() {
     var isBreak by remember { mutableStateOf(false) }
     var stars by remember { mutableIntStateOf(0) }
     var musicOn by remember { mutableStateOf(false) }
+    var selectedSong by remember { mutableStateOf<Uri?>(null) }
+    var selectedSongName by remember { mutableStateOf("هنوز آهنگی انتخاب نشده") }
+    var player by remember { mutableStateOf<MediaPlayer?>(null) }
+    val context = LocalContext.current
     val music = remember { SoftMelody() }
-    DisposableEffect(Unit) { onDispose { music.stop() } }
+    val songPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) { }
+            try { player?.release() } catch (_: Exception) { }
+            player = null
+            music.stop()
+            musicOn = false
+            selectedSong = uri
+            selectedSongName = uri.lastPathSegment?.substringAfterLast('/')
+                ?.takeLast(28)?.takeIf { it.isNotBlank() } ?: "آهنگ انتخاب‌شده"
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            music.stop()
+            try { player?.release() } catch (_: Exception) { }
+        }
+    }
 
     LaunchedEffect(running, remaining) {
         if (running && remaining > 0) {
@@ -133,17 +168,68 @@ private fun FocusTimerApp() {
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Card(Modifier.weight(1f), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .86f))) {
-                        Column(Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("⭐", fontSize = 26.sp); Text("$stars ستاره", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Purple); Text("جلسه‌های کامل", fontSize = 12.sp, color = Purple.copy(alpha = .7f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+                    Card(Modifier.weight(0.82f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .9f))) {
+                        Column(Modifier.fillMaxWidth().padding(vertical = 18.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("⭐", fontSize = 30.sp)
+                            Text("$stars ستاره", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Purple)
+                            Text("قهرمان امروز", fontSize = 12.sp, color = Purple.copy(alpha = .7f))
                         }
                     }
-                    Card(Modifier.weight(1f), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .86f))) {
-                        Column(Modifier.fillMaxWidth().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("🎵", fontSize = 26.sp)
-                            TextButton(onClick = { musicOn = !musicOn; if (musicOn) music.start() else music.stop() }) { Text(if (musicOn) "خاموش کردن" else "آهنگ آرامش", color = Purple, fontWeight = FontWeight.Bold) }
-                            Text("ملودی آرام و بی‌کلام", fontSize = 11.sp, color = Purple.copy(alpha = .7f))
+                    Card(Modifier.weight(1.18f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .9f))) {
+                        Column(Modifier.fillMaxWidth().padding(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("🎶", fontSize = 24.sp)
+                                Spacer(Modifier.width(5.dp))
+                                Text("آهنگ‌های من", color = Purple, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            }
+                            TextButton(onClick = { songPicker.launch(arrayOf("audio/*")) }) {
+                                Icon(Icons.Default.LibraryMusic, contentDescription = null, tint = Purple)
+                                Spacer(Modifier.width(4.dp))
+                                Text("انتخاب آهنگ", color = Purple, fontWeight = FontWeight.SemiBold)
+                            }
+                            Text(selectedSongName, fontSize = 10.sp, color = Purple.copy(alpha = .72f), maxLines = 1)
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                FilledTonalButton(
+                                    onClick = {
+                                        val uri = selectedSong
+                                        if (uri != null) {
+                                            try {
+                                                if (player?.isPlaying == true) {
+                                                    player?.pause(); musicOn = false
+                                                } else if (player != null) {
+                                                    player?.start(); musicOn = true
+                                                } else {
+                                                    val mp = MediaPlayer()
+                                                    player = mp
+                                                    mp.setDataSource(context, uri)
+                                                    mp.isLooping = true
+                                                    mp.setOnPreparedListener { it.start(); musicOn = true }
+                                                    mp.setOnErrorListener { _, _, _ -> musicOn = false; true }
+                                                    mp.prepareAsync()
+                                                }
+                                            } catch (_: Exception) { musicOn = false }
+                                        } else {
+                                            musicOn = !musicOn
+                                            if (musicOn) music.start() else music.stop()
+                                        }
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(if (musicOn) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = null)
+                                    Spacer(Modifier.width(3.dp))
+                                    Text(if (musicOn) "مکث" else "پخش", fontSize = 13.sp)
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        music.stop()
+                                        try { player?.pause() } catch (_: Exception) { }
+                                        musicOn = false
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                                ) { Icon(Icons.Default.Stop, contentDescription = "توقف موسیقی", tint = Purple) }
+                            }
+                            Text("ملودی آرام داخلی هم آماده است", fontSize = 9.sp, color = Purple.copy(alpha = .7f))
                         }
                     }
                 }
