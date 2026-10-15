@@ -65,7 +65,7 @@ private fun FocusTimerApp() {
     var stars by remember { mutableIntStateOf(0) }
     var musicOn by remember { mutableStateOf(false) }
     var selectedSong by remember { mutableStateOf<Uri?>(null) }
-    var selectedSongName by remember { mutableStateOf("هنوز آهنگی انتخاب نشده") }
+    var selectedSongName by remember { mutableStateOf("موسیقی تمرکز نوشا 🎵") }
     var player by remember { mutableStateOf<MediaPlayer?>(null) }
     val context = LocalContext.current
     val music = remember { SoftMelody() }
@@ -192,7 +192,7 @@ private fun FocusTimerApp() {
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 FilledTonalButton(
                                     onClick = {
-                                        val uri = selectedSong
+                                        val uri = selectedSong ?: Uri.parse("android.resource://${context.packageName}/${R.raw.focus_music}")
                                         if (uri != null) {
                                             try {
                                                 if (player?.isPlaying == true) {
@@ -229,7 +229,7 @@ private fun FocusTimerApp() {
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                                 ) { Icon(Icons.Default.Stop, contentDescription = "توقف موسیقی", tint = Purple) }
                             }
-                            Text("ملودی آرام داخلی هم آماده است", fontSize = 9.sp, color = Purple.copy(alpha = .7f))
+                            Text("موسیقی انتخاب‌شده همراه برنامه است", fontSize = 9.sp, color = Purple.copy(alpha = .7f))
                         }
                     }
                 }
