@@ -1,5 +1,5 @@
 package com.hoyar.nooshafocus
-
+import androidx.compose.ui.draw.rotate
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
