@@ -8,6 +8,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -32,6 +37,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -153,6 +160,9 @@ private fun FocusTimerApp() {
                         }
                     }
                 }
+
+                Spacer(Modifier.height(16.dp))
+                HomeworkWritingCard(isFocusing = running && !isBreak)
 
                 Spacer(Modifier.height(16.dp))
                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .94f))) {
@@ -282,6 +292,97 @@ private fun ChoiceBox(text: String, selected: Boolean, modifier: Modifier = Modi
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 3.dp)) {
             Text(text, color = Purple, fontSize = 13.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+
+@Composable
+private fun HomeworkWritingCard(isFocusing: Boolean) {
+    val transition = rememberInfiniteTransition(label = "homework-writing")
+    val penProgress by transition.animateFloat(
+        initialValue = 0.08f,
+        targetValue = 0.88f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = if (isFocusing) 1700 else 2600, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pen-progress"
+    )
+    val sparkle by transition.animateFloat(
+        initialValue = 0.65f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
+        label = "sparkle"
+    )
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF9FE)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(15.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("✏️ وقت مشق نوشتن", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Purple)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                if (isFocusing) "آفرین! مداد کوچولو داره می‌نویسه 🌟" else "با قدم‌های کوچولو، مشق‌هامون رو می‌نویسیم",
+                fontSize = 13.sp, color = Purple.copy(alpha = .8f), textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(10.dp))
+            Box(
+                Modifier.fillMaxWidth().height(190.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Brush.horizontalGradient(listOf(Color(0xFFE8F8FF), Color(0xFFFFEAF3), Color(0xFFF1EAFF)))),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(Modifier.fillMaxSize().padding(12.dp)) {
+                    val paperLeft = size.width * 0.16f
+                    val paperTop = size.height * 0.08f
+                    val paperWidth = size.width * 0.68f
+                    val paperHeight = size.height * 0.82f
+                    drawRoundRect(Color.White, Offset(paperLeft, paperTop), androidx.compose.ui.geometry.Size(paperWidth, paperHeight), cornerRadius = androidx.compose.ui.geometry.CornerRadius(18f, 18f))
+                    // notebook margin and writing guides
+                    drawLine(Color(0xFFFFB6C9), Offset(paperLeft + paperWidth * .17f, paperTop + 10f), Offset(paperLeft + paperWidth * .17f, paperTop + paperHeight - 8f), strokeWidth = 2.dp.toPx())
+                    for (row in 1..4) {
+                        val y = paperTop + paperHeight * (row * 0.18f)
+                        drawLine(Color(0xFFD8DDF5), Offset(paperLeft + paperWidth * .10f, y), Offset(paperLeft + paperWidth * .92f, y), strokeWidth = 1.5.dp.toPx())
+                    }
+                    // progressively drawn handwriting-like strokes
+                    val startX = paperLeft + paperWidth * .25f
+                    val available = paperWidth * .62f
+                    for (row in 0..2) {
+                        val y = paperTop + paperHeight * (0.18f + row * 0.18f)
+                        val fraction = if (row < 2) 1f else penProgress
+                        val lineEnd = startX + available * fraction
+                        var x = startX
+                        var index = 0
+                        while (x < lineEnd) {
+                            val length = minOf(available * 0.075f, lineEnd - x)
+                            val rise = if (index % 2 == 0) -5.dp.toPx() else 4.dp.toPx()
+                            drawLine(Color(0xFF8D79D9), Offset(x, y + rise), Offset(x + length, y), strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round)
+                            x += available * 0.105f
+                            index++
+                        }
+                    }
+                    // pencil moves as the writing progresses
+                    val px = startX + available * penProgress
+                    val py = paperTop + paperHeight * .52f
+                    rotate(degrees = -28f, pivot = Offset(px, py)) {
+                        drawRoundRect(Color(0xFFFFC857), Offset(px - 7.dp.toPx(), py - 29.dp.toPx()), androidx.compose.ui.geometry.Size(14.dp.toPx(), 45.dp.toPx()), cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx()))
+                        drawLine(Color(0xFFB77B52), Offset(px, py + 16.dp.toPx()), Offset(px, py + 23.dp.toPx()), strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round)
+                        drawLine(Color(0xFFEF8DAF), Offset(px - 7.dp.toPx(), py - 19.dp.toPx()), Offset(px + 7.dp.toPx(), py - 19.dp.toPx()), strokeWidth = 3.dp.toPx())
+                    }
+                }
+                Text("✨", modifier = Modifier.align(Alignment.TopEnd).padding(12.dp), fontSize = (22 * sparkle).sp)
+                Text("🌼", modifier = Modifier.align(Alignment.BottomStart).padding(10.dp), fontSize = 25.sp)
+            }
+            Spacer(Modifier.height(10.dp))
+            Surface(color = if (isFocusing) Mint else Lilac, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    if (isFocusing) "تو می‌تونی نوشا جان! فقط یک خط دیگه 💜" else "برای شروع، فقط یک خط بنویس!",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    color = Purple, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
